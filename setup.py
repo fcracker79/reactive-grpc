@@ -22,7 +22,7 @@ def get_packages(path):
     
     return out
 
-packages = get_packages('pycomb')
+packages = get_packages('rxgrpc')
 setup(name='reactive-grpc',
       version='0.0.1',
       description='Python reactive gRPC support',

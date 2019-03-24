@@ -1,3 +1,6 @@
+from rx import operators
+
+from rxgrpc.mappers import grpc_invocation_map
 from test.proto import test_pb2
 from test.proto.test_pb2_grpc import TestServiceServicer
 from test.rxgrpc import BaseUnitTestCase
@@ -82,5 +85,26 @@ class TestSimpleRPC(BaseUnitTestCase):
             for i, response in enumerate(responses):
                 self.assertEqual(test_pb2.TestResponse, type(response))
                 self.assertEqual('response: message{}'.format(i), response.message)
+        finally:
+            server.server.stop(None)
+
+    def test_message_transformation(self):
+        def _transform_message(m: test_pb2.TestRequest) -> test_pb2.TestRequest:
+            return test_pb2.TestRequest(message='TRANSFORMED {}'.format(m.message))
+
+        server = self.create_server(self._Servicer())
+        server.set_grpc_observable(
+            server.grpc_pipe(
+                operators.map(grpc_invocation_map(_transform_message)),
+                method_name='/rxgrpc.test.TestService/GetOneToOne'),
+            method_name='/rxgrpc.test.TestService/GetOneToOne'
+        )
+        server.grpc_subscribe()
+        server.server.start()
+        try:
+            client = self.create_client()
+            response = client.GetOneToOne(test_pb2.TestRequest(message='message0'))
+            self.assertEqual(test_pb2.TestResponse, type(response))
+            self.assertEqual('response: TRANSFORMED message0', response.message)
         finally:
             server.server.stop(None)

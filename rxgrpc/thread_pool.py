@@ -21,20 +21,35 @@ def _log(msg: str, *a):
     _LOGGER.debug('[Thread %s] %s', threading.current_thread().getName(), msg, *a)
 
 
-class GRPCInvocation:
+class GRPCInvocation(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def run(self):
+        pass
+
+    @abc.abstractmethod
+    def add_done_callback(self, done_callback):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def result(self):
+        pass
+
+
+class _GRPCInvocation(GRPCInvocation):
     def __init__(self, fun: callable, rpc_event, state, a, kw):
         self.fun = fun
         self.rpc_event = rpc_event
         self.state = state
         self.a = a
         self.kw = kw
-        self.result = None
+        self._result = None
         self._done_callbacks = []
         self._done = False
 
     def run(self):
         _log('grpc invocation run')
-        self.result = self.fun(self.rpc_event, self.state, *self.a, **self.kw)
+        self._result = self.fun(self.rpc_event, self.state, *self.a, **self.kw)
         _log('grpc invocation run complete')
         self._done = True
         self._run_callbacks()
@@ -44,6 +59,10 @@ class GRPCInvocation:
         self._done_callbacks.append(done_callback)
         if self._done:
             self._run_callbacks()
+
+    @property
+    def result(self):
+        return self._result
 
     def _run_callbacks(self):
         _log('running callbacks')
@@ -59,7 +78,10 @@ class DuckTypingThreadPool(metaclass=abc.ABCMeta):
 
 class GRPCObservable(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def grpc_pipe(self, *operators: typing.Callable[[Observable], Observable], **kw) -> Observable:
+    def grpc_pipe(
+            self, *operators: typing.Callable[[Observable], Observable],
+            method_name: typing.Optional[str] = None,
+            method: typing.Optional[MethodDescriptor] = None) -> Observable:
         pass
 
     @abc.abstractmethod
@@ -67,11 +89,16 @@ class GRPCObservable(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def set_grpc_observable(self, new_observable: Observable, **kw) -> None:
+    def set_grpc_observable(
+            self, new_observable: Observable,
+            method_name: typing.Optional[str] = None,
+            method: typing.Optional[MethodDescriptor] = None) -> None:
         pass
 
     @abc.abstractmethod
-    def get_grpc_observable(self, **kw) -> Observable:
+    def get_grpc_observable(
+            self, method_name: typing.Optional[str] = None,
+            method: typing.Optional[MethodDescriptor] = None) -> Observable:
         pass
 
 
@@ -79,22 +106,20 @@ class _ReactiveThreadPool(GRPCObservable, DuckTypingThreadPool):
     def __init__(self, protobuf_module, max_workers: int):
         self.observers = {}  # type: typing.Dict[str, typing.List[Observer]]
         self.observables = {}  # type: typing.Dict[str, Observable]
-        self._observable_to_be_subscribed = []  # type: typing.List[Observable]
+        self._observable_to_be_subscribed = {}  # type: typing.Dict[str, Observable]
 
         pb_descriptor = protobuf_module.DESCRIPTOR
         for service in pb_descriptor.services_by_name.values():
             for method in service.methods:
                 full_method_name = self._get_method_name(method=method)
                 self._add_observer(full_method_name)
-                self._observable_to_be_subscribed.append(
-                    observe_on(ThreadPoolScheduler(max_workers))(
-                        self.get_grpc_observable(method_name=full_method_name)
-                    )
+                self._observable_to_be_subscribed[full_method_name] = observe_on(ThreadPoolScheduler(max_workers))(
+                    self.get_grpc_observable(method_name=full_method_name)
                 )
 
     def grpc_subscribe(self) -> Disposable:
         disposables = []
-        for observable in self._observable_to_be_subscribed:
+        for observable in self._observable_to_be_subscribed.values():
             disposables.append(observable.subscribe(
                 Observer(
                     on_next=lambda grpc_invocation: grpc_invocation.run(),
@@ -110,14 +135,17 @@ class _ReactiveThreadPool(GRPCObservable, DuckTypingThreadPool):
         return pipe
 
     def set_grpc_observable(self, new_observable: Observable, **kw):
-        idx = self._observable_to_be_subscribed.index(self.observables[self._get_method_name(**kw)])
-        self.observables[self._get_method_name(**kw)] = new_observable
-        self._observable_to_be_subscribed[idx] = new_observable
+        method_name = self._get_method_name(**kw)
+        if method_name not in self._observable_to_be_subscribed:
+            _LOGGER.exception('Method name {} not found, kw: {}'.format(method_name, kw))
+            raise KeyError
+        self.observables[method_name] = new_observable
+        self._observable_to_be_subscribed[method_name] = new_observable
 
     def submit(self, fun: callable, rpc_event, state, *a, **kw):
         _log('submit')
         method = rpc_event.call_details.method.decode()
-        grpc_invocation = GRPCInvocation(fun, rpc_event, state, a, kw)
+        grpc_invocation = _GRPCInvocation(fun, rpc_event, state, a, kw)
         for observer in self.observers[method]:
             observer.on_next(grpc_invocation)
         return grpc_invocation
@@ -138,7 +166,11 @@ class _ReactiveThreadPool(GRPCObservable, DuckTypingThreadPool):
         return self.observers[self._get_method_name(**kw)]
 
     def get_grpc_observable(self, **kw) -> Observable:
-        return self.observables[self._get_method_name(**kw)]
+        try:
+            return self.observables[self._get_method_name(**kw)]
+        except KeyError:
+            _LOGGER.exception('Could not find observable, kw: %s', kw)
+            raise
 
     def _add_observer(self, path: str):
         # noinspection PyUnusedLocal

@@ -36,7 +36,7 @@ setup(name='reactive-grpc',
       zip_safe=False,
       test_suite="pycomb.test",
       classifiers=[
-          'Development Status :: 4 - Beta',
+          'Development Status :: 3 - Alpha',
           'Intended Audience :: Developers',
           'Topic :: Software Development',
           'License :: OSI Approved :: MIT License',

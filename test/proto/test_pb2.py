@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='rxgrpc.test',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\ntest.proto\x12\x0brxgrpc.test\"\x1e\n\x0bTestRequest\x12\x0f\n\x07message\x18\x01 \x01(\t\"\x1f\n\x0cTestResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xb8\x02\n\x0bTestService\x12\x44\n\x0bGetOneToOne\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00\x12I\n\x0eGetOneToStream\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00\x30\x01\x12I\n\x0eGetStreamToOne\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00(\x01\x12M\n\x11GetStreamToStream\x12\x18.rxgrpc.test.TestRequest\x1a\x18.rxgrpc.test.TestRequest\"\x00(\x01\x30\x01\x62\x06proto3')
+  serialized_pb=_b('\n\ntest.proto\x12\x0brxgrpc.test\"\x1e\n\x0bTestRequest\x12\x0f\n\x07message\x18\x01 \x01(\t\"\x1f\n\x0cTestResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xb9\x02\n\x0bTestService\x12\x44\n\x0bGetOneToOne\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00\x12I\n\x0eGetOneToStream\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00\x30\x01\x12I\n\x0eGetStreamToOne\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00(\x01\x12N\n\x11GetStreamToStream\x12\x18.rxgrpc.test.TestRequest\x1a\x19.rxgrpc.test.TestResponse\"\x00(\x01\x30\x01\x62\x06proto3')
 )
 
 
@@ -113,7 +113,7 @@ _TESTSERVICE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   serialized_start=93,
-  serialized_end=405,
+  serialized_end=406,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetOneToOne',
@@ -148,7 +148,7 @@ _TESTSERVICE = _descriptor.ServiceDescriptor(
     index=3,
     containing_service=None,
     input_type=_TESTREQUEST,
-    output_type=_TESTREQUEST,
+    output_type=_TESTRESPONSE,
     serialized_options=None,
   ),
 ])

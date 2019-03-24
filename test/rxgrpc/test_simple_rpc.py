@@ -36,3 +36,51 @@ class TestSimpleRPC(BaseUnitTestCase):
             self.assertEqual('response: message0', response.message)
         finally:
             server.server.stop(None)
+
+    def test_one_to_stream(self):
+        server = self.create_server(self._Servicer())
+        server.grpc_subscribe()
+        server.server.start()
+        try:
+            client = self.create_client()
+            responses = list(client.GetOneToStream(test_pb2.TestRequest(message='message0')))
+            self.assertEqual(3, len(responses))
+            for i, response in enumerate(responses):
+                self.assertEqual(test_pb2.TestResponse, type(response))
+                self.assertEqual('response {}: message0'.format(i), response.message)
+        finally:
+            server.server.stop(None)
+
+    def test_stream_to_one(self):
+        server = self.create_server(self._Servicer())
+        server.grpc_subscribe()
+        server.server.start()
+        try:
+            client = self.create_client()
+            response = client.GetStreamToOne(
+                (test_pb2.TestRequest(message='message{}'.format(i)) for i in range(3))
+            )
+            self.assertEqual(test_pb2.TestResponse, type(response))
+            self.assertEqual('response: message0, message1, message2', response.message)
+        finally:
+            server.server.stop(None)
+
+    def test_stream_to_stream(self):
+        server = self.create_server(self._Servicer())
+        server.grpc_subscribe()
+        server.server.start()
+
+        responses = []
+        try:
+            client = self.create_client()
+            responses.extend(
+                client.GetStreamToStream(
+                    (test_pb2.TestRequest(message='message{}'.format(i)) for i in range(3))
+                )
+            )
+            self.assertEqual(3, len(responses))
+            for i, response in enumerate(responses):
+                self.assertEqual(test_pb2.TestResponse, type(response))
+                self.assertEqual('response: message{}'.format(i), response.message)
+        finally:
+            server.server.stop(None)

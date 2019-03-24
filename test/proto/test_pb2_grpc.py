@@ -32,7 +32,7 @@ class TestServiceStub(object):
     self.GetStreamToStream = channel.stream_stream(
         '/rxgrpc.test.TestService/GetStreamToStream',
         request_serializer=test__pb2.TestRequest.SerializeToString,
-        response_deserializer=test__pb2.TestRequest.FromString,
+        response_deserializer=test__pb2.TestResponse.FromString,
         )
 
 
@@ -89,7 +89,7 @@ def add_TestServiceServicer_to_server(servicer, server):
       'GetStreamToStream': grpc.stream_stream_rpc_method_handler(
           servicer.GetStreamToStream,
           request_deserializer=test__pb2.TestRequest.FromString,
-          response_serializer=test__pb2.TestRequest.SerializeToString,
+          response_serializer=test__pb2.TestResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

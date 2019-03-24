@@ -61,3 +61,4 @@ target/
 venv/
 
 deploy.sh
+test/proto/refresh_proto.sh

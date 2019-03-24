@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package rxgrpc.test;
+
+service TestService {
+  rpc GetOneToOne(TestRequest) returns (TestResponse) {}
+  rpc GetOneToStream(TestRequest) returns (stream TestResponse) {}
+  rpc GetStreamToOne(stream TestRequest) returns (TestResponse) {}
+  rpc GetStreamToStream(stream TestRequest) returns (stream TestRequest) {}
+}
+
+message TestRequest {
+  string message = 1;
+}
+
+message TestResponse {
+  string message = 1;
+}

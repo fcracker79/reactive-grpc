@@ -30,20 +30,18 @@ class TestSimpleRPC(BaseUnitTestCase):
 
     def test_one_to_one(self):
         server = self.create_server(self._Servicer())
-        server.grpc_subscribe()
-        server.server.start()
+        server.start()
         try:
             client = self.create_client()
             response = client.GetOneToOne(test_pb2.TestRequest(message='message0'))
             self.assertEqual(test_pb2.TestResponse, type(response))
             self.assertEqual('response: message0', response.message)
         finally:
-            server.server.stop(None)
+            server.stop(None)
 
     def test_one_to_stream(self):
         server = self.create_server(self._Servicer())
-        server.grpc_subscribe()
-        server.server.start()
+        server.start()
         try:
             client = self.create_client()
             responses = list(client.GetOneToStream(test_pb2.TestRequest(message='message0')))
@@ -52,12 +50,11 @@ class TestSimpleRPC(BaseUnitTestCase):
                 self.assertEqual(test_pb2.TestResponse, type(response))
                 self.assertEqual('response {}: message0'.format(i), response.message)
         finally:
-            server.server.stop(None)
+            server.stop(None)
 
     def test_stream_to_one(self):
         server = self.create_server(self._Servicer())
-        server.grpc_subscribe()
-        server.server.start()
+        server.start()
         try:
             client = self.create_client()
             response = client.GetStreamToOne(
@@ -66,12 +63,11 @@ class TestSimpleRPC(BaseUnitTestCase):
             self.assertEqual(test_pb2.TestResponse, type(response))
             self.assertEqual('response: message0, message1, message2', response.message)
         finally:
-            server.server.stop(None)
+            server.stop(None)
 
     def test_stream_to_stream(self):
         server = self.create_server(self._Servicer())
-        server.grpc_subscribe()
-        server.server.start()
+        server.start()
 
         responses = []
         try:
@@ -86,7 +82,7 @@ class TestSimpleRPC(BaseUnitTestCase):
                 self.assertEqual(test_pb2.TestResponse, type(response))
                 self.assertEqual('response: message{}'.format(i), response.message)
         finally:
-            server.server.stop(None)
+            server.stop(None)
 
     def test_message_transformation(self):
         def _transform_message(m: test_pb2.TestRequest) -> test_pb2.TestRequest:
@@ -99,12 +95,11 @@ class TestSimpleRPC(BaseUnitTestCase):
                 method_name='/rxgrpc.test.TestService/GetOneToOne'),
             method_name='/rxgrpc.test.TestService/GetOneToOne'
         )
-        server.grpc_subscribe()
-        server.server.start()
+        server.start()
         try:
             client = self.create_client()
             response = client.GetOneToOne(test_pb2.TestRequest(message='message0'))
             self.assertEqual(test_pb2.TestResponse, type(response))
             self.assertEqual('response: TRANSFORMED message0', response.message)
         finally:
-            server.server.stop(None)
+            server.stop(None)

@@ -1,3 +1,5 @@
+[![build status](https://img.shields.io/travis/fcracker79/reactive-grpc/master.svg?style=flat-square)](https://travis-ci.org/fcracker79/reactive-grpc)
+
 # reactive-grpc
 A simple gRPC bridge to reactive streams.
 
@@ -67,19 +69,20 @@ class _Servicer(TestServiceServicer):
 
 
 workers = 3
-s = server.create_server(test_pb2, workers)
-test_pb2_grpc.add_TestServiceServicer_to_server(_Servicer(), s.server)
-s.server.add_insecure_port('[::]:50051')
+rx_server = server.create_server(test_pb2, workers)
+test_pb2_grpc.add_TestServiceServicer_to_server(_Servicer(), rx_server)
+rx_server.add_insecure_port('[::]:50051')
 
 def _transform_message(m: test_pb2.TestRequest) -> test_pb2.TestRequest:
     return test_pb2.TestRequest(message='TRANSFORMED {}'.format(m.message))
 
-s.set_grpc_observable(
-    s.grpc_pipe(
+rx_server.set_grpc_observable(
+    rx_server.grpc_pipe(
         operators.map(mappers.grpc_invocation_map(_transform_message)),
         method_name='/rxgrpc.test.TestService/GetOneToOne'),
     method_name='/rxgrpc.test.TestService/GetOneToOne'
 )
-s.server.start()
+
+rx_server.start()
 
 ```

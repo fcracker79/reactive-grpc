@@ -1,0 +1,14 @@
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
+language: python
+python:
+  - "3.5"
+  - "3.6"
+  - "nightly"
+# command to install dependencies
+install: "pip install -r requirements.txt"
+# command to run tests
+script: python -m unittest discover

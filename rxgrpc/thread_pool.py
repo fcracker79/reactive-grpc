@@ -35,22 +35,40 @@ class GRPCInvocation(metaclass=abc.ABCMeta):
     def result(self):
         pass
 
+    @abc.abstractmethod
+    def map(self, transformer: typing.Callable[[typing.Any], typing.Any]) -> 'GRPCInvocation':
+        pass
+
 
 class _GRPCInvocation(GRPCInvocation):
-    def __init__(self, fun: callable, rpc_event, state, a, kw):
+    def __init__(self, fun: callable, rpc_event, state, behaviour, argument_thunk, a, kw):
         self.fun = fun
         self.rpc_event = rpc_event
         self.state = state
+        self.behaviour = behaviour
+        self.argument_thunk = argument_thunk
         self.a = a
         self.kw = kw
         self._result = None
         self._done_callbacks = []
         self._done = False
+        self._transform = lambda d: d
+
+    def map(self, transformer: typing.Callable[[typing.Any], typing.Any]) -> GRPCInvocation:
+        result = _GRPCInvocation(
+            self.fun, self.rpc_event, self.state,
+            self.behaviour, self.argument_thunk, self.a, self.kw)
+        result._done_callbacks.extend(self._done_callbacks)
+        result._transform = transformer
+        return result
 
     def run(self):
         _log('grpc invocation run')
-        self._result = self.fun(self.rpc_event, self.state, *self.a, **self.kw)
-        _log('grpc invocation run complete')
+        self._result = self.fun(
+            self.rpc_event, self.state, self.behaviour,
+            lambda: self._transform(self.argument_thunk()),
+            *self.a, **self.kw)
+        _log('grpc invocation run complete, result')
         self._done = True
         self._run_callbacks()
 
@@ -72,7 +90,7 @@ class _GRPCInvocation(GRPCInvocation):
 
 class DuckTypingThreadPool(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def submit(self, fun: callable, rpc_event, state, *a, **kw) -> GRPCInvocation:
+    def submit(self, fun: callable, rpc_event, state, behaviour, argument_thunk, *a, **kw) -> GRPCInvocation:
         pass
 
 
@@ -135,6 +153,7 @@ class _ReactiveThreadPool(GRPCObservable, DuckTypingThreadPool):
         return pipe
 
     def set_grpc_observable(self, new_observable: Observable, **kw):
+        new_observable = observe_on(ThreadPoolScheduler(1))(new_observable)
         method_name = self._get_method_name(**kw)
         if method_name not in self._observable_to_be_subscribed:
             _LOGGER.exception('Method name {} not found, kw: {}'.format(method_name, kw))
@@ -142,10 +161,10 @@ class _ReactiveThreadPool(GRPCObservable, DuckTypingThreadPool):
         self.observables[method_name] = new_observable
         self._observable_to_be_subscribed[method_name] = new_observable
 
-    def submit(self, fun: callable, rpc_event, state, *a, **kw):
+    def submit(self, fun: callable, rpc_event, state, behaviour, argument_thunk, *a, **kw):
         _log('submit')
         method = rpc_event.call_details.method.decode()
-        grpc_invocation = _GRPCInvocation(fun, rpc_event, state, a, kw)
+        grpc_invocation = _GRPCInvocation(fun, rpc_event, state, behaviour, argument_thunk, a, kw)
         for observer in self.observers[method]:
             observer.on_next(grpc_invocation)
         return grpc_invocation

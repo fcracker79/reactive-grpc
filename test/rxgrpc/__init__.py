@@ -1,3 +1,4 @@
+import logging
 import unittest
 
 import grpc
@@ -5,6 +6,15 @@ import grpc
 from rxgrpc import server
 from rxgrpc.server import GRPCObservableServer
 from test.proto import test_pb2, test_pb2_grpc
+
+
+_LOGGER = logging.getLogger()
+_LOGGER.setLevel(logging.DEBUG)
+_HANDLER = logging.StreamHandler()
+_HANDLER.setLevel(logging.DEBUG)
+_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+_LOGGER.addHandler(_HANDLER)
+_HANDLER.setFormatter(_FORMATTER)
 
 
 class BaseUnitTestCase(unittest.TestCase):

@@ -103,3 +103,27 @@ class TestSimpleRPC(BaseUnitTestCase):
             self.assertEqual('response: TRANSFORMED message0', response.message)
         finally:
             server.stop(None)
+
+    def test_message_transformation_stream(self):
+        def _transform_message(m: test_pb2.TestRequest) -> test_pb2.TestRequest:
+            return test_pb2.TestRequest(message='TRANSFORMED {}'.format(m.message))
+
+        server = self.create_server(self._Servicer())
+        server.set_grpc_observable(
+            server.grpc_pipe(
+                operators.map(grpc_invocation_map(_transform_message)),
+                method_name='/rxgrpc.test.TestService/GetStreamToOne'),
+            method_name='/rxgrpc.test.TestService/GetStreamToOne'
+        )
+        server.start()
+        try:
+            client = self.create_client()
+            response = client.GetStreamToOne(
+                (test_pb2.TestRequest(message='message{}'.format(i)) for i in range(3))
+            )
+            self.assertEqual(test_pb2.TestResponse, type(response))
+            self.assertEqual(
+                'response: TRANSFORMED message0, TRANSFORMED message1, TRANSFORMED message2',
+                response.message)
+        finally:
+            server.stop(None)

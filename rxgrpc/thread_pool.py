@@ -63,14 +63,24 @@ class _GRPCInvocation(GRPCInvocation):
         return result
 
     def run(self):
-        _log('grpc invocation run')
-        self._result = self.fun(
-            self.rpc_event, self.state, self.behaviour,
-            lambda: self._transform(self.argument_thunk()),
-            *self.a, **self.kw)
-        _log('grpc invocation run complete, result')
-        self._done = True
-        self._run_callbacks()
+        try:
+            def _safe_transform():
+                argument_thunk = self.argument_thunk()
+                try:
+                    return map(self._transform, iter(argument_thunk))
+                except TypeError:
+                    return self._transform(argument_thunk)
+            _log('grpc invocation run')
+            self._result = self.fun(
+                self.rpc_event, self.state, self.behaviour,
+                _safe_transform,
+                *self.a, **self.kw)
+            _log('grpc invocation run complete, result')
+            self._done = True
+            self._run_callbacks()
+        except Exception:
+            _LOGGER.exception('Error running task')
+            raise
 
     def add_done_callback(self, done_callback):
         _log('adding callback')

@@ -39,6 +39,10 @@ class GRPCInvocation(metaclass=abc.ABCMeta):
     def map(self, transformer: typing.Callable[[typing.Any], typing.Any]) -> 'GRPCInvocation':
         pass
 
+    @abc.abstractmethod
+    def input_message(self) -> typing.Any:
+        pass
+
 
 class _GRPCInvocation(GRPCInvocation):
     def __init__(self, fun: callable, rpc_event, state, behaviour, argument_thunk, a, kw):
@@ -92,6 +96,9 @@ class _GRPCInvocation(GRPCInvocation):
     def result(self):
         return self._result
 
+    def input_message(self) -> typing.Any:
+        return self.argument_thunk()
+    
     def _run_callbacks(self):
         _log('running callbacks')
         for c in self._done_callbacks:

@@ -56,7 +56,7 @@ class TestFilters(BaseUnitTestCase):
         server = self.create_server(self._Servicer())
         server.set_grpc_observable(
             server.grpc_pipe(
-                *operators.filter(_filter_message),
+                operators.filter(_filter_message),
                 method_name='/rxgrpc.test.TestService/GetStreamToOne'),
             method_name='/rxgrpc.test.TestService/GetStreamToOne'
         )

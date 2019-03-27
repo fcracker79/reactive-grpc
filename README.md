@@ -86,3 +86,22 @@ rx_server.set_grpc_observable(
 rx_server.start()
 
 ```
+
+Here it is an example of a filter for a streaming input:
+
+```python
+from rxgrpc import operators
+from test.proto import test_pb2
+
+
+def _filter_message(m: test_pb2.TestRequest) -> test_pb2.TestRequest:
+    return bool(int(m.message[-1]) % 2)
+
+server = ...
+server.set_grpc_observable(
+    server.grpc_pipe(
+        operators.filter(_filter_message),
+        method_name='/rxgrpc.test.TestService/GetStreamToOne'),
+    method_name='/rxgrpc.test.TestService/GetStreamToOne'
+)
+```

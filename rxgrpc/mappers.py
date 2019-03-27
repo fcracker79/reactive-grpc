@@ -15,3 +15,9 @@ def grpc_invocation_map(transformer: typing.Callable[[T1], T2]) -> typing.Callab
     def _f(g: GRPCInvocation) -> GRPCInvocation:
         return g.map(transformer)
     return _f
+
+
+def grpc_invocation_filter(transformer: typing.Callable[[T1], bool]) -> typing.Callable[[GRPCInvocation], GRPCInvocation]:
+    def _f(g: GRPCInvocation) -> GRPCInvocation:
+        return g.filter(transformer)
+    return _f

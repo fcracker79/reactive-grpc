@@ -40,6 +40,10 @@ class GRPCInvocation(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def filter(self, filter_function: typing.Callable[[typing.Any], bool]) -> 'GRPCInvocation':
+        pass
+
+    @abc.abstractmethod
     def input_message(self) -> typing.Any:
         pass
 
@@ -57,6 +61,7 @@ class _GRPCInvocation(GRPCInvocation):
         self._done_callbacks = []
         self._done = False
         self._transform = lambda d: d
+        self._filter = lambda d: True
 
     def map(self, transformer: typing.Callable[[typing.Any], typing.Any]) -> GRPCInvocation:
         result = _GRPCInvocation(
@@ -66,18 +71,20 @@ class _GRPCInvocation(GRPCInvocation):
         result._transform = transformer
         return result
 
+    def filter(self, filter_function: typing.Callable[[typing.Any], bool]) -> GRPCInvocation:
+        result = _GRPCInvocation(
+            self.fun, self.rpc_event, self.state,
+            self.behaviour, self.argument_thunk, self.a, self.kw)
+        result._done_callbacks.extend(self._done_callbacks)
+        result._filter = filter_function
+        return result
+
     def run(self):
         try:
-            def _safe_transform():
-                argument_thunk = self.argument_thunk()
-                try:
-                    return map(self._transform, iter(argument_thunk))
-                except TypeError:
-                    return self._transform(argument_thunk)
             _log('grpc invocation run')
             self._result = self.fun(
                 self.rpc_event, self.state, self.behaviour,
-                _safe_transform,
+                self.input_message,  # the new argument thunk
                 *self.a, **self.kw)
             _log('grpc invocation run complete, result')
             self._done = True
@@ -97,8 +104,12 @@ class _GRPCInvocation(GRPCInvocation):
         return self._result
 
     def input_message(self) -> typing.Any:
-        return self.argument_thunk()
-    
+        argument_thunk = self.argument_thunk()
+        try:
+            return map(self._transform, filter(self._filter, iter(argument_thunk)))
+        except TypeError:
+            return self._transform(argument_thunk) if self._filter(argument_thunk) else None
+
     def _run_callbacks(self):
         _log('running callbacks')
         for c in self._done_callbacks:

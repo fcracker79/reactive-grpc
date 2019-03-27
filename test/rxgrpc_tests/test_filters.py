@@ -15,10 +15,11 @@ class TestFilters(BaseUnitTestCase):
                 yield test_pb2.TestResponse(message='response {}: {}'.format(i, request.message))
 
         def GetStreamToOne(self, request_iterator, context):
-            print('xxxxx {}'.format(list(request_iterator)))
+            requests = list(request_iterator)
+            print('GetStreamToOne {}'.format(requests))
             return test_pb2.TestResponse(
                 message='response: {}'.format(
-                    ', '.join(map(lambda d: d.message, request_iterator))
+                    ', '.join(map(lambda d: d.message, requests))
                 )
             )
 
@@ -67,7 +68,7 @@ class TestFilters(BaseUnitTestCase):
             )
             self.assertEqual(test_pb2.TestResponse, type(response))
             self.assertEqual(
-                'response: TRANSFORMED message1, TRANSFORMED message3',
+                'response: message1, message3',
                 response.message)
         finally:
             server.stop(None)

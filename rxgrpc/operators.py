@@ -3,7 +3,7 @@ import typing
 from rx import operators as orig_operators, Observable
 
 from rxgrpc import filters
-from rxgrpc.mappers import grpc_invocation_map
+from rxgrpc.mappers import grpc_invocation_map, grpc_invocation_filter
 
 T1 = typing.TypeVar('T1')
 T2 = typing.TypeVar('T2')
@@ -29,8 +29,9 @@ _base_filter = filter
 
 def filter(f: typing.Callable[[T1], bool]):
     def _transform_iterable(d):
+        print('trasformo', d)
         try:
             return _base_filter(f, iter(d))
         except TypeError:
             return d
-    return orig_operators.filter(filters.filter(f)), map(_transform_iterable)
+    return orig_operators.map(grpc_invocation_filter(f)),  #  orig_operators.filter(filters.filter(f))

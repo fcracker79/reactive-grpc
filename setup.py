@@ -24,7 +24,7 @@ def get_packages(path):
 
 packages = get_packages('rxgrpc')
 setup(name='reactive-grpc',
-      version='0.0.1',
+      version='0.0.2',
       description='Python reactive gRPC support',
       long_description=readfile('README.rst'),
       url='https://github.com/fcracker79/reactive-grpc',
